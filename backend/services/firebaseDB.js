@@ -1,52 +1,72 @@
 // Phase 4: Firebase Database Service
-// Will be fully implemented in Phase 4
+// Supports both Firebase Admin SDK and in-memory fallback for testing
 
-// Placeholder for Firebase Admin initialization
+const { v4: uuidv4 } = require('uuid');
+
 let db = null;
+let isFirebaseMode = false;
+
+// In-memory database fallback (for testing/development)
+const memoryDB = {
+  yahooFrilListings: [],
+  recognizedGames: [],
+  profitAnalysis: []
+};
 
 /**
- * Initialize Firebase connection (Phase 4)
+ * Initialize Firebase connection
  */
 async function initializeFirebase() {
   try {
-    // TODO: Phase 4
-    // const admin = require('firebase-admin');
-    // const serviceAccount = require('./firebase-key.json');
-    // admin.initializeApp({
-    //   credential: admin.credential.cert(serviceAccount)
-    // });
-    // db = admin.firestore();
+    const firebaseKeyPath = process.env.FIREBASE_KEY_PATH;
 
-    console.log('[Firebase] Initialization deferred to Phase 4');
+    if (firebaseKeyPath) {
+      const admin = require('firebase-admin');
+      const serviceAccount = require(firebaseKeyPath);
+
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+
+      db = admin.firestore();
+      isFirebaseMode = true;
+      console.log('[Firebase] Connected to Firebase Firestore');
+    } else {
+      console.log('[Firebase] Using in-memory database for development');
+      isFirebaseMode = false;
+    }
+
     return true;
   } catch (error) {
-    console.error('[Firebase] Initialization error:', error);
-    throw error;
+    console.warn('[Firebase] Firebase initialization failed, using in-memory DB:', error.message);
+    isFirebaseMode = false;
+    return true;
   }
 }
 
 /**
- * Save listing to Firebase
+ * Save listing to Firebase / Memory DB
  * Collection: yahooFrilListings
  */
 async function saveListing(listingData) {
   try {
-    if (!db) {
-      console.warn('[Firebase] Database not initialized - skipping save');
-      return null;
-    }
+    const id = uuidv4();
+    const record = {
+      id,
+      ...listingData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
     console.log(`[Firebase] Saving listing: ${listingData.yahooId}`);
 
-    // TODO: Phase 4
-    // const ref = await db.collection('yahooFrilListings').add({
-    //   ...listingData,
-    //   createdAt: new Date(),
-    //   updatedAt: new Date()
-    // });
-    // return ref.id;
-
-    return listingData.yahooId;
+    if (isFirebaseMode && db) {
+      const ref = await db.collection('yahooFrilListings').add(record);
+      return ref.id;
+    } else {
+      memoryDB.yahooFrilListings.push(record);
+      return id;
+    }
   } catch (error) {
     console.error('[Firebase] Error saving listing:', error);
     throw error;
@@ -54,32 +74,33 @@ async function saveListing(listingData) {
 }
 
 /**
- * Save recognized games to Firebase
+ * Save recognized games to Firebase / Memory DB
  * Collection: recognizedGames
  */
 async function saveRecognizedGames(listingId, games) {
   try {
-    if (!db) {
-      console.warn('[Firebase] Database not initialized - skipping save');
-      return null;
-    }
-
     console.log(`[Firebase] Saving ${games.length} recognized games for listing ${listingId}`);
 
-    // TODO: Phase 4
-    // const batch = db.batch();
-    // for (const game of games) {
-    //   const ref = db.collection('recognizedGames').doc();
-    //   batch.set(ref, {
-    //     listingId,
-    //     gameName: game.gameName,
-    //     confidence: game.confidence,
-    //     averagePrice: game.averagePrice,
-    //     priceRange: game.priceRange,
-    //     recognizedAt: new Date()
-    //   });
-    // }
-    // await batch.commit();
+    const gameRecords = games.map(game => ({
+      id: uuidv4(),
+      listingId,
+      gameName: game.gameName,
+      confidence: game.confidence,
+      averagePrice: game.averagePrice,
+      priceRange: game.priceRange,
+      recognizedAt: new Date().toISOString()
+    }));
+
+    if (isFirebaseMode && db) {
+      const batch = db.batch();
+      for (const gameRecord of gameRecords) {
+        const ref = db.collection('recognizedGames').doc();
+        batch.set(ref, gameRecord);
+      }
+      await batch.commit();
+    } else {
+      memoryDB.recognizedGames.push(...gameRecords);
+    }
 
     return games.length;
   } catch (error) {
@@ -89,27 +110,28 @@ async function saveRecognizedGames(listingId, games) {
 }
 
 /**
- * Save profit analysis to Firebase
+ * Save profit analysis to Firebase / Memory DB
  * Collection: profitAnalysis
  */
 async function saveProfitAnalysis(listingId, analysisData) {
   try {
-    if (!db) {
-      console.warn('[Firebase] Database not initialized - skipping save');
-      return null;
-    }
+    const id = uuidv4();
+    const record = {
+      id,
+      listingId,
+      ...analysisData,
+      createdAt: new Date().toISOString()
+    };
 
     console.log(`[Firebase] Saving profit analysis for listing ${listingId}`);
 
-    // TODO: Phase 4
-    // const ref = await db.collection('profitAnalysis').add({
-    //   listingId,
-    //   ...analysisData,
-    //   createdAt: new Date()
-    // });
-    // return ref.id;
-
-    return listingId;
+    if (isFirebaseMode && db) {
+      const ref = await db.collection('profitAnalysis').add(record);
+      return ref.id;
+    } else {
+      memoryDB.profitAnalysis.push(record);
+      return id;
+    }
   } catch (error) {
     console.error('[Firebase] Error saving analysis:', error);
     throw error;
@@ -117,29 +139,31 @@ async function saveProfitAnalysis(listingId, analysisData) {
 }
 
 /**
- * Fetch all listings from Firebase
+ * Fetch all listings from Firebase / Memory DB
  */
 async function getListings(limit = 50) {
   try {
-    if (!db) {
-      console.warn('[Firebase] Database not initialized');
-      return [];
-    }
-
     console.log(`[Firebase] Fetching listings (limit: ${limit})`);
 
-    // TODO: Phase 4
-    // const snapshot = await db.collection('yahooFrilListings')
-    //   .orderBy('createdAt', 'desc')
-    //   .limit(limit)
-    //   .get();
-    //
-    // return snapshot.docs.map(doc => ({
-    //   id: doc.id,
-    //   ...doc.data()
-    // }));
+    let listings = [];
 
-    return [];
+    if (isFirebaseMode && db) {
+      const snapshot = await db.collection('yahooFrilListings')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get();
+
+      listings = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } else {
+      listings = memoryDB.yahooFrilListings
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, limit);
+    }
+
+    return listings;
   } catch (error) {
     console.error('[Firebase] Error fetching listings:', error);
     throw error;
@@ -151,39 +175,60 @@ async function getListings(limit = 50) {
  */
 async function getProfitStats(days = 30) {
   try {
-    if (!db) {
-      console.warn('[Firebase] Database not initialized');
-      return null;
-    }
-
     console.log(`[Firebase] Calculating profit stats for last ${days} days`);
 
-    // TODO: Phase 4
-    // const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    // const snapshot = await db.collection('profitAnalysis')
-    //   .where('createdAt', '>=', sinceDate)
-    //   .get();
-    //
-    // const stats = {
-    //   totalAnalyzed: snapshot.size,
-    //   totalProfit: 0,
-    //   averageProfitPerListing: 0,
-    //   averageMargin: 0
-    // };
-    //
-    // snapshot.forEach(doc => {
-    //   stats.totalProfit += doc.data().estimatedProfit || 0;
-    // });
-    //
-    // stats.averageProfitPerListing = snapshot.size > 0 ? stats.totalProfit / snapshot.size : 0;
-    //
-    // return stats;
+    const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    return null;
+    let analyses = [];
+
+    if (isFirebaseMode && db) {
+      const snapshot = await db.collection('profitAnalysis')
+        .where('createdAt', '>=', sinceDate.toISOString())
+        .get();
+
+      analyses = snapshot.docs.map(doc => doc.data());
+    } else {
+      analyses = memoryDB.profitAnalysis.filter(
+        a => new Date(a.createdAt) >= sinceDate
+      );
+    }
+
+    const stats = {
+      totalAnalyzed: analyses.length,
+      totalProfit: 0,
+      totalIndividualValue: 0,
+      averageProfitPerListing: 0,
+      averageProfitMargin: 0
+    };
+
+    analyses.forEach(analysis => {
+      stats.totalProfit += analysis.estimatedProfit || 0;
+      stats.totalIndividualValue += analysis.estimatedIndividualValue || 0;
+    });
+
+    if (analyses.length > 0) {
+      stats.averageProfitPerListing = Math.round(stats.totalProfit / analyses.length);
+      const avgAskingPrice = analyses.reduce((sum, a) => sum + a.totalAskingPrice, 0) / analyses.length;
+      stats.averageProfitMargin = avgAskingPrice > 0 ? ((stats.averageProfitPerListing / avgAskingPrice) * 100).toFixed(1) : 0;
+    }
+
+    return stats;
   } catch (error) {
     console.error('[Firebase] Error calculating stats:', error);
     throw error;
   }
+}
+
+/**
+ * Get in-memory database stats (for testing)
+ */
+function getMemoryDBStats() {
+  return {
+    yahooFrilListings: memoryDB.yahooFrilListings.length,
+    recognizedGames: memoryDB.recognizedGames.length,
+    profitAnalysis: memoryDB.profitAnalysis.length,
+    mode: isFirebaseMode ? 'Firebase' : 'In-Memory'
+  };
 }
 
 module.exports = {
@@ -192,5 +237,6 @@ module.exports = {
   saveRecognizedGames,
   saveProfitAnalysis,
   getListings,
-  getProfitStats
+  getProfitStats,
+  getMemoryDBStats
 };

@@ -20,6 +20,12 @@ app.use(express.urlencoded({ limit: '50mb' }));
 // Import controllers
 const analyzeController = require('./controllers/analyzeController');
 
+// Initialize Firebase
+const firebaseService = require('./services/firebaseDB');
+firebaseService.initializeFirebase().catch(err => {
+  console.warn('[Server] Firebase init warning:', err.message);
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'Backend service is running', timestamp: new Date().toISOString() });
@@ -43,12 +49,9 @@ app.get('/api/mercari-price', async (req, res) => {
       return res.status(400).json({ error: 'gameName query parameter required' });
     }
 
-    // Will implement in Phase 3
-    res.json({
-      gameName,
-      status: 'not-implemented',
-      message: 'Mercari scraper will be implemented in Phase 3'
-    });
+    const mercariService = require('./services/mercariScraper');
+    const priceData = await mercariService.getGamePrice(gameName);
+    res.json(priceData);
   } catch (error) {
     console.error('[Server] Error in /api/mercari-price:', error);
     res.status(500).json({ error: error.message });
@@ -57,13 +60,36 @@ app.get('/api/mercari-price', async (req, res) => {
 
 app.get('/api/listings', async (req, res) => {
   try {
-    // Will fetch from Firebase in Phase 4
-    res.json({
-      listings: [],
-      message: 'Firebase integration will be completed in Phase 4'
-    });
+    const limit = req.query.limit || 50;
+    const listings = await firebaseService.getListings(parseInt(limit));
+    res.json({ listings });
   } catch (error) {
     console.error('[Server] Error in /api/listings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/stats', async (req, res) => {
+  try {
+    const days = req.query.days || 30;
+    const stats = await firebaseService.getProfitStats(parseInt(days));
+    res.json(stats || {
+      totalAnalyzed: 0,
+      totalProfit: 0,
+      averageProfitPerListing: 0,
+      averageProfitMargin: 0
+    });
+  } catch (error) {
+    console.error('[Server] Error in /api/stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/db-stats', (req, res) => {
+  try {
+    const stats = firebaseService.getMemoryDBStats();
+    res.json(stats);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
