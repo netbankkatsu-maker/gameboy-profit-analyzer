@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 400px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .header {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 18px;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+      background: #efefef;
+    }
+
+    .status-box {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .status-label {
+      color: #666;
+    }
+
+    .status-value {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .success-icon {
+      color: #4caf50;
+    }
+
+    .error-icon {
+      color: #f44336;
+    }
+
+    .history {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .history-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 12px;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-title-text {
+      flex: 1;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .history-profit {
+      color: #4caf50;
+      font-weight: 600;
+    }
+
+    .feedback {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+      font-size: 12px;
+      border-left: 4px solid #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎮 ゲーム買取判定</h1>
+      <p>Yahoo Fril → メルカリ利益分析</p>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-primary" id="analyzeBtn">今すぐ分析</button>
+      <button class="btn-secondary" id="dashboardBtn">ダッシュボード</button>
+    </div>
+
+    <div class="status-box">
+      <div class="status-item">
+        <span class="status-label">ステータス</span>
+        <span class="status-value" id="status">準備完了</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">最終実行</span>
+        <span class="status-value" id="lastRun">未実行</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">分析件数</span>
+        <span class="status-value" id="analysisCount">0</span>
+      </div>
+    </div>
+
+    <div class="history" id="historyContainer">
+      <div class="history-title">📊 最近の分析</div>
+      <div id="historyList" style="color: #999; font-size: 12px;">データなし</div>
+    </div>
+
+    <div class="feedback" id="feedback" style="display: none;"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

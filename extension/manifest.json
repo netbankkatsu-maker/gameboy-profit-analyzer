@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "ゲーム買取利益判定ツール",
+  "version": "1.0.0",
+  "description": "Yahoo Frilのゲーム出品から自動的にゲームを認識し、メルカリデータで利益を計算",
+
+  "permissions": [
+    "storage",
+    "alarms",
+    "scripting",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "https://fril.jp/*",
+    "https://jp.mercari.com/*"
+  ],
+
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  }
+}
