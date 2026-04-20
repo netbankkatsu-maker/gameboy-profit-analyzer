@@ -1,5 +1,5 @@
 // Phase 3: Mercari Scraper Service
-// Implements Puppeteer-based web scraping with caching
+// Implements Puppeteer-based web scraping with User-Agent rotation and caching
 
 const puppeteer = require('puppeteer');
 const mercariPriceCache = new Map();
@@ -7,6 +7,23 @@ const mercariPriceCache = new Map();
 const MERCARI_BASE_URL = 'https://jp.mercari.com/search';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const REQUEST_DELAY = parseInt(process.env.MERCARI_REQUEST_DELAY || '2000');
+
+// User-Agent rotation list to avoid blocking
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
+];
+
+let userAgentIndex = 0;
+
+function getRotatedUserAgent() {
+  const ua = USER_AGENTS[userAgentIndex];
+  userAgentIndex = (userAgentIndex + 1) % USER_AGENTS.length;
+  return ua;
+}
 
 /**
  * Get average price and history for a game title from Mercari
@@ -64,7 +81,9 @@ async function scrapeMercariPrices(gameTitle) {
       });
 
       const page = await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+      const rotatedUA = getRotatedUserAgent();
+      await page.setUserAgent(rotatedUA);
+      console.log(`[MercariScraper] Using User-Agent: ${rotatedUA.substring(0, 50)}...`);
 
       const searchUrl = `${MERCARI_BASE_URL}?keyword=${encodeURIComponent(gameTitle)}&status=sold`;
       console.log(`[MercariScraper] Navigating to: ${searchUrl}`);

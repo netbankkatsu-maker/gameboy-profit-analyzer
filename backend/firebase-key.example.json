@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "gameboy-profit-analyzer",
+  "private_key_id": "key-id-example",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKj\nMzEfYyjiWA4R4/M2bS1+fWIcxoGyV4fsXEg2SV1h0q+9ZKIYsEt4+1ZcMHvHCWfp\nq2sN8OFCZ5FhxB/kRkjE6KJvVjzjpHx8bYhDy4l5V3sZJOmyAplEuhQqQNm4Y0yv\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk@gameboy-profit-analyzer.iam.gserviceaccount.com",
+  "client_id": "123456789",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk%40gameboy-profit-analyzer.iam.gserviceaccount.com"
+}

@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  backend:
+    build: .
+    container_name: gameboy-analyzer-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - FIREBASE_KEY_PATH=/app/backend/firebase-key.json
+      - MERCARI_REQUEST_DELAY=2000
+    volumes:
+      - ./backend/firebase-key.json:/app/backend/firebase-key.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: web-app.Dockerfile
+    container_name: gameboy-analyzer-web
+    ports:
+      - "3001:3001"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default:
+    name: gameboy-analyzer-network
+    driver: bridge
+
+volumes:
+  firebase-keys:
+    driver: local
