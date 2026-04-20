@@ -13,9 +13,32 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb' }));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || ['http://localhost:3001', 'chrome-extension://*'],
+  credentials: true
+}));
+app.use(express.json({ limit: '50mb', charset: 'utf8' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true, charset: 'utf8' }));
+
+// Set UTF-8 charset for all responses
+app.use((req, res, next) => {
+  res.charset = 'utf-8';
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
+
+// API Key authentication middleware (optional for development)
+const apiKeyAuth = (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+    const validKey = process.env.API_KEY;
+
+    if (!apiKey || apiKey !== validKey) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+    }
+  }
+  next();
+};
 
 // Import controllers
 const analyzeController = require('./controllers/analyzeController');
@@ -32,7 +55,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.post('/api/analyze', async (req, res) => {
+app.post('/api/analyze', apiKeyAuth, async (req, res) => {
   try {
     const result = await analyzeController.analyzeGameboyListing(req.body);
     res.json(result);

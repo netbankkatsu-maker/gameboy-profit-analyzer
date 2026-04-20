@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow unauthenticated read/write for development
+    // ⚠️  CHANGE THIS BEFORE PRODUCTION
+    match /{document=**} {
+      allow read, write: if request.auth != null || request.headers['x-api-key'] == resource.get('apiKey');
+    }
+
+    // Listings collection - authenticated users only
+    match /yahooFrilListings/{document=**} {
+      allow create: if request.auth != null && request.resource.data.yahooId is string;
+      allow read: if request.auth != null;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+    }
+
+    // Recognized games - read-only for users
+    match /recognizedGames/{document=**} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null;
+      allow delete: if request.auth.uid == resource.data.userId;
+    }
+
+    // Profit analysis - user specific
+    match /profitAnalysis/{document=**} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+    }
+  }
+}
