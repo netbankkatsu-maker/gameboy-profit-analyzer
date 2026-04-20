@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: gameboy-profit-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: CORS_ORIGIN
+        sync: false   # Set this to your Vercel frontend URL in Render dashboard
+      - key: API_KEY
+        generateValue: true

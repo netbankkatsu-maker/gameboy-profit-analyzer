@@ -1,11 +1,107 @@
 const imageRecognitionService = require('../services/imageRecognition');
 const mercariScraperService = require('../services/mercariScraper');
 const firebaseService = require('../services/firebaseDB');
+const { scrapeFrilDescription } = require('../services/frilScraper');
+
+// Platform / generic tags that appear as hashtags but are NOT game titles
+const NON_GAME_TAGS = new Set([
+  'ゲームボーイ', 'ゲームボーイアドバンス', 'ゲームボーイカラー',
+  'GBA', 'GB', 'GBC', 'GBASP', 'ゲームボーイSP',
+  'Nintendo', 'ニンテンドー', '任天堂',
+  'まとめ', 'セット', 'まとめ売り', 'まとめ買い',
+  '送料無料', '値下げ', '値下げ交渉', '即購入可', '早い者勝ち',
+  'ゲームソフト', 'レトロゲーム', 'カセット',
+]);
+
+/**
+ * Detect console platform from listing title / description text.
+ * Returns 'GBA' | 'GBC' | 'GB'
+ */
+function detectPlatform(title, description) {
+  const text = (title + ' ' + description).toLowerCase();
+  if (/アドバンス|advance|gba/.test(text)) return 'GBA';
+  if (/カラー|color|colour|gbc/.test(text)) return 'GBC';
+  return 'GB';
+}
+
+/**
+ * Build a Mercari search term that includes platform context.
+ * e.g. "ポケットモンスター赤" + GB → "ポケットモンスター赤 ゲームボーイ"
+ */
+function buildMercariSearchTerm(gameName, platform) {
+  const suffix = { GBA: ' GBA', GBC: ' GBC', GB: ' ゲームボーイ' };
+  // Only append platform if the name doesn't already contain it
+  const already = /GBA|GBC|ゲームボーイ/i.test(gameName);
+  return already ? gameName : gameName + (suffix[platform] || '');
+}
+
+/**
+ * Extract game titles from description text and hashtags.
+ * Priority: numbered list in description > hashtags
+ */
+function extractGamesFromDescription(description, hashtags) {
+  const games = [];
+  const seen = new Set();
+
+  const addGame = (name, confidence, source) => {
+    // Normalise: strip section headers like【商品状態】and parenthetical notes like（赤カセット）
+    name = name.replace(/\s*【[^】]*】.*$/, '')           // remove trailing 【section】 and beyond
+               .replace(/[（(][^)）]{1,20}[)）]\s*$/, '') // remove trailing (note)
+               .replace(/\s+/g, ' ').trim();
+    if (name.length < 2 || seen.has(name)) return;
+    seen.add(name);
+    games.push({ name, confidence, source });
+  };
+
+  // Pattern 1: Numbered list — works for both newline-delimited and space-delimited text.
+  // og:description collapses newlines to spaces, so we split on the list markers themselves.
+  // e.g. "1. マリオパーティ アドバンス 2. ファミコンミニ..." → split at each "N. "
+  const markerRe = /\d{1,2}[.、．:：]\s+/g;
+  const markerMatches = [...description.matchAll(markerRe)];
+  if (markerMatches.length >= 2) {
+    // Extract text between consecutive markers
+    for (let i = 0; i < markerMatches.length; i++) {
+      const start = markerMatches[i].index + markerMatches[i][0].length;
+      const end = i < markerMatches.length - 1 ? markerMatches[i + 1].index : description.length;
+      const name = description.slice(start, end).trim();
+      addGame(name, 0.95, 'description-numbered');
+    }
+  } else {
+    // Also try newline-based pattern (for raw HTML descriptions with actual newlines)
+    const numberedRe = /(?:^|\n)\s*(?:\d+[.、．:：]|[①-⑩])\s*([^\n\r]{2,60})/g;
+    let m;
+    while ((m = numberedRe.exec(description)) !== null) {
+      addGame(m[1].trim(), 0.95, 'description-numbered');
+    }
+  }
+
+  // Pattern 2: Bullet "・ゲーム名" or "- ゲーム名" (only if no numbered list found)
+  if (games.length === 0) {
+    const bulletRe = /(?:^|\n|。|　)\s*[・\-]\s*([^\n\r・\-]{2,60})/g;
+    let m;
+    while ((m = bulletRe.exec(description)) !== null) {
+      addGame(m[1].trim(), 0.85, 'description-bullet');
+    }
+  }
+
+  // Pattern 3: Hashtags (supplement if description games are few)
+  if (games.length < 3) {
+    for (const tag of hashtags) {
+      if (!NON_GAME_TAGS.has(tag) && !/^[A-Za-z0-9\s]+$/.test(tag)) {
+        addGame(tag, 0.70, 'hashtag');
+      }
+    }
+  }
+
+  return games;
+}
 
 async function analyzeGameboyListing(payload) {
   const { yahooId, title, askingPrice, imageUrls, listingUrl, createdAt } = payload;
 
   console.log(`[Analyze] Starting analysis for listing ${yahooId}`);
+  // Detect platform early from title (refined further once description is fetched)
+  let platform = detectPlatform(title, '');
 
   // Store listing record
   const listingRecord = {
@@ -19,16 +115,52 @@ async function analyzeGameboyListing(payload) {
     analyzedAt: new Date().toISOString()
   };
 
-  // Step 1: Recognize games from images
+  // Step 1: Try to extract games from the listing description page (most reliable)
+  let descriptionGames = [];
+  if (listingUrl) {
+    console.log(`[Analyze] Fetching description from ${listingUrl}...`);
+    try {
+      const { description, hashtags } = await scrapeFrilDescription(listingUrl);
+      if (description || hashtags.length > 0) {
+        descriptionGames = extractGamesFromDescription(description, hashtags);
+        console.log(`[Analyze] Extracted ${descriptionGames.length} games from description`);
+        // Refine platform from the full description text
+        platform = detectPlatform(title, description);
+      }
+    } catch (err) {
+      console.warn('[Analyze] Description scrape failed (non-fatal):', err.message);
+    }
+  }
+
+  // Step 2: Recognize games from images (OCR fallback / supplement)
   console.log(`[Analyze] Recognizing games from ${imageUrls.length} images...`);
-  const recognizedGames = [];
+  const ocrGames = [];
 
   for (const imageUrl of imageUrls) {
     try {
-      const recognition = await imageRecognitionService.recognizeGameFromImage(imageUrl);
-      recognizedGames.push(recognition);
+      const recognitionResults = await imageRecognitionService.recognizeGameFromImage(imageUrl);
+      if (Array.isArray(recognitionResults) && recognitionResults.length > 0) {
+        // Take top 5 per image (no artificial 3-game cap)
+        recognitionResults.slice(0, 5).forEach(r => {
+          if (r && !ocrGames.some(g => g.name === r.name)) {
+            ocrGames.push(r);
+          }
+        });
+      }
     } catch (error) {
       console.error(`[Analyze] Error recognizing game from ${imageUrl}:`, error);
+    }
+  }
+
+  // Step 3: Merge — description games are primary.
+  // Only supplement with OCR if description found fewer than 3 games
+  // (hash-classifier always returns the same 3 names, so skip it when we have real data)
+  const recognizedGames = [...descriptionGames];
+  if (descriptionGames.length < 3) {
+    for (const g of ocrGames) {
+      if (!recognizedGames.some(d => d.name === g.name)) {
+        recognizedGames.push(g);
+      }
     }
   }
 
@@ -45,26 +177,34 @@ async function analyzeGameboyListing(payload) {
     };
   }
 
-  // Step 2: Get price data for each recognized game
-  console.log(`[Analyze] Fetching price data for ${recognizedGames.length} games...`);
+  // Step 4: Get price data for each recognized game
+  console.log(`[Analyze] Platform detected: ${platform} | Fetching prices for ${recognizedGames.length} games...`);
   const gamesPriceData = [];
 
   for (const game of recognizedGames) {
-    if (game.confidence >= 0.7) {
+    // Description games: 0.95; OCR games: >= 0.4; hash classifier: >= 0.65
+    if (game.confidence >= 0.4) {
+      // Build search term with platform context for better Mercari results
+      const searchTerm = buildMercariSearchTerm(game.name, platform);
       try {
-        const priceData = await mercariScraperService.getGamePrice(game.name);
+        const priceData = await mercariScraperService.getGamePrice(searchTerm);
         gamesPriceData.push({
-          gameName: game.name,
+          gameName: game.name,          // display name (clean)
+          searchTerm,                   // what was searched on Mercari
+          platform,                     // GB | GBC | GBA
           confidence: game.confidence,
+          source: game.source || 'ocr',
           averagePrice: priceData.averagePrice || 0,
           priceRange: priceData.priceRange || { min: 0, max: 0 }
         });
       } catch (error) {
-        console.error(`[Analyze] Error fetching price for ${game.name}:`, error);
-        // Continue with default values
+        console.error(`[Analyze] Error fetching price for ${searchTerm}:`, error);
         gamesPriceData.push({
           gameName: game.name,
+          searchTerm,
+          platform,
           confidence: game.confidence,
+          source: game.source || 'ocr',
           averagePrice: 0,
           priceRange: { min: 0, max: 0 }
         });
@@ -72,12 +212,12 @@ async function analyzeGameboyListing(payload) {
     }
   }
 
-  // Step 3: Calculate profit
+  // Step 5: Calculate profit
   const profitAnalysis = calculateProfit(askingPrice, gamesPriceData);
 
   console.log(`[Analyze] Analysis complete - Estimated profit: ¥${profitAnalysis.estimatedProfit}`);
 
-  // Step 4: Store results in Firebase (Phase 4)
+  // Step 6: Store results in Firebase
   try {
     await firebaseService.saveListing(listingRecord);
     await firebaseService.saveRecognizedGames(yahooId, gamesPriceData);
