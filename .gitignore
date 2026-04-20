@@ -12,3 +12,9 @@ build/
 ~
 .cache/
 .parcel-cache/
+
+# Tesseract language data (large binary files - download separately)
+*.traineddata
+
+# Vercel / Render local config
+.vercel/
