@@ -15,24 +15,52 @@ const memoryDB = {
 
 /**
  * Initialize Firebase connection
+ * Supports:
+ *   FIREBASE_SERVICE_ACCOUNT  – JSON文字列（Vercel/Railway推奨）
+ *   FIREBASE_KEY_PATH         – JSONファイルパス（ローカル開発用）
  */
 async function initializeFirebase() {
   try {
-    const firebaseKeyPath = process.env.FIREBASE_KEY_PATH;
+    const admin = require('firebase-admin');
 
-    if (firebaseKeyPath) {
-      const admin = require('firebase-admin');
-      const serviceAccount = require(firebaseKeyPath);
-
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-
+    // 既に初期化済みなら再利用
+    if (admin.apps.length > 0) {
       db = admin.firestore();
       isFirebaseMode = true;
-      console.log('[Firebase] Connected to Firebase Firestore');
+      return true;
+    }
+
+    let credential = null;
+
+    // 優先1: 環境変数にJSON文字列 (Vercel / Railway)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        credential = admin.credential.cert(serviceAccount);
+        console.log('[Firebase] Using FIREBASE_SERVICE_ACCOUNT env var');
+      } catch (e) {
+        console.warn('[Firebase] Failed to parse FIREBASE_SERVICE_ACCOUNT:', e.message);
+      }
+    }
+
+    // 優先2: ファイルパス (ローカル開発)
+    if (!credential && process.env.FIREBASE_KEY_PATH) {
+      try {
+        const serviceAccount = require(process.env.FIREBASE_KEY_PATH);
+        credential = admin.credential.cert(serviceAccount);
+        console.log('[Firebase] Using FIREBASE_KEY_PATH file');
+      } catch (e) {
+        console.warn('[Firebase] Failed to load FIREBASE_KEY_PATH:', e.message);
+      }
+    }
+
+    if (credential) {
+      admin.initializeApp({ credential });
+      db = admin.firestore();
+      isFirebaseMode = true;
+      console.log('[Firebase] Connected to Firebase Firestore ✅');
     } else {
-      console.log('[Firebase] Using in-memory database for development');
+      console.log('[Firebase] No credentials – using in-memory database');
       isFirebaseMode = false;
     }
 
