@@ -9,7 +9,7 @@ function DetailModal({ listing, onClose }) {
   const games = pa.details || []
   const imageUrl = listing.imageUrls?.[0] || null
   const frilUrl = listing.listingUrl || (listing.yahooId && !listing.yahooId.startsWith('fril-demo')
-    ? `https://item.fril.jp/${listing.yahooId}`
+    ? `https://paypayfleamarket.yahoo.co.jp/item/${listing.yahooId}`
     : null)
 
   return (
@@ -122,7 +122,7 @@ function DetailModal({ listing, onClose }) {
         {frilUrl && (
           <div className="modal-footer">
             <a href={frilUrl} target="_blank" rel="noreferrer" className="fril-link-btn">
-              🔗 Frilで出品を確認
+              🔗 Yahoo!フリマで確認
             </a>
           </div>
         )}
