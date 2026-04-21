@@ -134,7 +134,7 @@ function DetailModal({ listing, onClose }) {
 // ───────────────────────────────────────────
 // Main ListingTable
 // ───────────────────────────────────────────
-function ListingTable({ listings, onRefresh }) {
+function ListingTable({ listings, onRefresh, onScan, scanning }) {
   const [sortBy, setSortBy] = useState('profit')
   const [filterMin, setFilterMin] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
@@ -172,13 +172,23 @@ function ListingTable({ listings, onRefresh }) {
     <div className="listing-table-container">
       <div className="table-header">
         <h2>📋 出品一覧</h2>
-        <button
-          className={`refresh-btn ${refreshing ? 'loading' : ''} ${refreshStatus === 'ok' ? 'success' : ''} ${refreshStatus === 'error' ? 'error' : ''}`}
-          onClick={handleRefresh}
-          disabled={refreshing}
-        >
-          {refreshing ? '⏳ 更新中...' : refreshStatus === 'ok' ? '✅ 更新しました' : refreshStatus === 'error' ? '❌ エラー' : '🔄 更新'}
-        </button>
+        <div className="table-actions">
+          <button
+            className={`scan-btn ${scanning ? 'scanning' : ''}`}
+            onClick={onScan}
+            disabled={scanning || refreshing}
+            title="Yahoo Frilをスキャンして利益を分析します（約30〜60秒）"
+          >
+            {scanning ? '⏳ スキャン中...' : '🔍 Frilスキャン'}
+          </button>
+          <button
+            className={`refresh-btn ${refreshing ? 'loading' : ''} ${refreshStatus === 'ok' ? 'success' : ''} ${refreshStatus === 'error' ? 'error' : ''}`}
+            onClick={handleRefresh}
+            disabled={refreshing || scanning}
+          >
+            {refreshing ? '⏳ 更新中...' : refreshStatus === 'ok' ? '✅ 更新しました' : refreshStatus === 'error' ? '❌ エラー' : '🔄 更新'}
+          </button>
+        </div>
       </div>
 
       <div className="table-filters">

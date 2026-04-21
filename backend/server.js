@@ -143,7 +143,7 @@ app.post('/api/scan-fril', async (req, res) => {
 
   try {
     send({ stage: 'scraping', message: 'Yahoo Fril をスキャン中...' });
-    const maxListings = parseInt(req.query.max) || 10;
+    const maxListings = parseInt(req.query.max) || 3;
     const listings = await scrapeFrilListings(maxListings);
 
     if (listings.length === 0) {
@@ -167,6 +167,8 @@ app.post('/api/scan-fril', async (req, res) => {
           createdAt: new Date().toISOString(),
         });
         results.push(result);
+        // ストリームに結果を送信（フロントエンドがリアルタイム表示するため）
+        send({ stage: 'result', listing: result });
       } catch (err) {
         console.error(`[scan-fril] Error analyzing ${listing.itemId}:`, err.message);
       }

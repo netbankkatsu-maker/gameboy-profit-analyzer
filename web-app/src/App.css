@@ -19,19 +19,51 @@ body {
 .app-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 2rem;
-  text-align: center;
+  padding: 1.6rem 2rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 1rem;
+}
+
+.app-header-text {
+  text-align: center;
+  flex: 1;
 }
 
 .app-header h1 {
   font-size: 2rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .app-header p {
   font-size: 0.95rem;
   opacity: 0.9;
+}
+
+/* Help trigger button in header */
+.help-trigger-btn {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: white;
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+.help-trigger-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .app-nav {
@@ -96,13 +128,74 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+/* ─── スキャン進捗パネル ─────────────────────── */
+.scan-panel {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 0.9rem 1.4rem;
+  border-bottom: 3px solid #667eea;
+  font-size: 0.88rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+.scan-panel--done  { border-bottom-color: #4caf50; }
+.scan-panel--error { border-bottom-color: #e53935; background: #2d1b1b; }
+
+.scan-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.scan-panel__title { font-weight: 700; font-size: 0.95rem; }
+.scan-panel__count { color: #a6e3a1; font-size: 0.85rem; }
+
+.scan-panel__bar-wrap {
+  height: 6px;
+  background: #313244;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.scan-panel__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #a6e3a1);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.scan-panel__msg {
+  color: #cba6f7;
+  margin-bottom: 0.4rem;
+}
+
+.scan-panel__logs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.3rem;
+}
+.scan-panel__log {
+  color: #a6e3a1;
+  font-size: 0.82rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid #313244;
+}
+
 @media (max-width: 768px) {
   .app-header {
-    padding: 1.5rem;
+    padding: 1.2rem 1rem;
   }
 
+  .app-header-inner {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .app-header-text { order: 1; width: 100%; }
+  .help-trigger-btn { order: 0; align-self: flex-end; margin-left: auto; }
+
   .app-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
 
   .app-content {

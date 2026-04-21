@@ -13,6 +13,37 @@
 }
 .table-header h2 { font-size: 1.5rem; color: #333; }
 
+/* ─── Table actions (scan + refresh) ─────────── */
+.table-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ─── Scan button ────────────────────────────── */
+.scan-btn {
+  padding: 0.5rem 1.2rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 150px;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.scan-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.scan-btn:active:not(:disabled) { transform: scale(0.97); }
+.scan-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+.scan-btn.scanning { background: #888; animation: pulse 1.2s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1; }
+}
+
 /* ─── Refresh button ─────────────────────────── */
 .refresh-btn {
   padding: 0.5rem 1.2rem;
