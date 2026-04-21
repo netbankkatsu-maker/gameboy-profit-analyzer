@@ -93,7 +93,45 @@ function extractGamesFromDescription(description, hashtags) {
     }
   }
 
+  // Pattern 4: 番号・記号なしで1行1タイトルの形式
+  // 例: 改行で区切られたゲーム名リスト（番号も箇条書き記号もない）
+  if (games.length === 0 && description.length > 5) {
+    const jpRe = /[ぁ-んァ-ン一-龥]/;
+    const lines = description.split(/\s{2,}|\n|。/).map(l => l.trim());
+    for (const line of lines) {
+      if (line.length < 2 || line.length > 40) continue;
+      if (!jpRe.test(line)) continue;
+      // ヘッダー・メタ情報っぽい行はスキップ
+      if (/[：:\/]|円|¥|\d{4,}|送料|状態|動作|確認|評価|発送|支払|セット|まとめ|個|本/.test(line)) continue;
+      if (NON_GAME_TAGS.has(line)) continue;
+      addGame(line, 0.60, 'description-line');
+    }
+  }
+
   return games;
+}
+
+/**
+ * タイトル文字列からゲーム名候補を抽出（最終フォールバック）
+ */
+function extractGamesFromTitle(title) {
+  if (!title) return [];
+  // 【】() などの装飾・数量・プラットフォーム名を除去
+  let clean = title
+    .replace(/【[^】]*】/g, ' ')
+    .replace(/[（(][^)）]*[)）]/g, ' ')
+    .replace(/\d+本|[0-9]+点|まとめ売り|まとめ|セット売り|セット|GBA|GB|GBC|ゲームボーイ(アドバンス|カラー|SP)?/gi, ' ')
+    .replace(/\s+/g, ' ').trim();
+
+  if (clean.length < 2) return [];
+
+  // 「・」や「/」で複数タイトルが繋がっているケース
+  const parts = clean.split(/[・\/&＆]/).map(p => p.trim()).filter(p => p.length >= 2 && p.length <= 40);
+  if (parts.length >= 2) {
+    return parts.map(name => ({ name, confidence: 0.50, source: 'title' }));
+  }
+
+  return [{ name: clean, confidence: 0.50, source: 'title' }];
 }
 
 async function analyzeGameboyListing(payload) {
@@ -161,6 +199,15 @@ async function analyzeGameboyListing(payload) {
       if (!recognizedGames.some(d => d.name === g.name)) {
         recognizedGames.push(g);
       }
+    }
+  }
+
+  // 最終フォールバック: タイトルからゲーム名を推測
+  if (recognizedGames.length === 0) {
+    const titleGames = extractGamesFromTitle(title);
+    recognizedGames.push(...titleGames);
+    if (titleGames.length > 0) {
+      console.log(`[Analyze] Using title fallback: ${titleGames.map(g => g.name).join(', ')}`);
     }
   }
 

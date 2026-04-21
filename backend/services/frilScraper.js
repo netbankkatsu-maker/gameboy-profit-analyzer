@@ -36,7 +36,9 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
  */
 async function searchYahooFuri(query, results = 100) {
   const q = encodeURIComponent(query);
-  const url = `${SEARCH_BASE}?results=${results}&sort=endtime&order=DESC&query=${q}`;
+  // sort=created_at → 新着順（販売中が上に来る）
+  // sort=endtime だと「最近終了＝売り切れ」が先頭に並ぶため使わない
+  const url = `${SEARCH_BASE}?results=${results}&sort=created_at&order=DESC&query=${q}`;
 
   console.log(`[YahooFuriScraper] GET "${query}"`);
 
@@ -58,6 +60,12 @@ async function searchYahooFuri(query, results = 100) {
 // ─────────────────────────────────────────────
 
 function normalizeItem(item) {
+  // 売り切れ・非公開アイテムを除外
+  const status = String(item.status || item.itemStatus || item.sell_status || '').toLowerCase();
+  if (status && (status.includes('sold') || status.includes('cancel') || status === '2' || status === 'closed')) {
+    return null;
+  }
+
   // Item ID — API uses various field names
   const itemId = item.id || item.itemId || item.itemNo
               || item.auction_id || String(item.no || '');
