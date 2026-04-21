@@ -139,31 +139,39 @@ async function saveProfitAnalysis(listingId, analysisData) {
 }
 
 /**
- * Fetch all listings from Firebase / Memory DB
+ * Fetch all listings from Firebase / Memory DB, joined with profitAnalysis
  */
 async function getListings(limit = 50) {
   try {
     console.log(`[Firebase] Fetching listings (limit: ${limit})`);
 
     let listings = [];
+    let analyses = [];
 
     if (isFirebaseMode && db) {
-      const snapshot = await db.collection('yahooFrilListings')
-        .orderBy('createdAt', 'desc')
-        .limit(limit)
-        .get();
-
-      listings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const [listingSnap, analysisSnap] = await Promise.all([
+        db.collection('yahooFrilListings').orderBy('createdAt', 'desc').limit(limit).get(),
+        db.collection('profitAnalysis').get()
+      ]);
+      listings = listingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      analyses = analysisSnap.docs.map(doc => doc.data());
     } else {
-      listings = memoryDB.yahooFrilListings
+      listings = [...memoryDB.yahooFrilListings]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, limit);
+      analyses = memoryDB.profitAnalysis;
     }
 
-    return listings;
+    // Join profitAnalysis into each listing by listingId (yahooId)
+    const analysisMap = {};
+    for (const a of analyses) {
+      analysisMap[a.listingId] = a;
+    }
+
+    return listings.map(l => ({
+      ...l,
+      profitAnalysis: analysisMap[l.yahooId] || analysisMap[l.id] || null
+    }));
   } catch (error) {
     console.error('[Firebase] Error fetching listings:', error);
     throw error;
@@ -238,5 +246,7 @@ module.exports = {
   saveProfitAnalysis,
   getListings,
   getProfitStats,
-  getMemoryDBStats
+  getMemoryDBStats,
+  // Expose memoryDB so seed.js can inject demo data directly
+  memoryDB
 };
