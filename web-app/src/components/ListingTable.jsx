@@ -174,14 +174,6 @@ function ListingTable({ listings, onRefresh, onScan, scanning }) {
         <h2>📋 出品一覧</h2>
         <div className="table-actions">
           <button
-            className={`scan-btn ${scanning ? 'scanning' : ''}`}
-            onClick={onScan}
-            disabled={scanning || refreshing}
-            title="Yahoo Frilをスキャンして利益を分析します（約30〜60秒）"
-          >
-            {scanning ? '⏳ スキャン中...' : '🔍 Frilスキャン'}
-          </button>
-          <button
             className={`refresh-btn ${refreshing ? 'loading' : ''} ${refreshStatus === 'ok' ? 'success' : ''} ${refreshStatus === 'error' ? 'error' : ''}`}
             onClick={handleRefresh}
             disabled={refreshing || scanning}

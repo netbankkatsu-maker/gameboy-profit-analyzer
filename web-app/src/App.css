@@ -66,6 +66,56 @@ body {
   transform: translateY(-1px);
 }
 
+/* ─── 検索バー ─── */
+.search-bar {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+}
+.search-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.search-btn {
+  padding: 0.65rem 1.4rem;
+  background: #fff;
+  color: #764ba2;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.search-btn:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+.search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.search-btn.scanning {
+  background: rgba(255,255,255,0.7);
+}
+
 .app-nav {
   background: white;
   border-bottom: 1px solid #ddd;

@@ -97,13 +97,16 @@ function normalizeItem(item) {
  * Search Yahoo Flea Market for GameBoy bundle listings.
  * Returns up to maxListings items shaped as { itemId, title, price, imageUrls, url }.
  */
-async function scrapeFrilListings(maxListings = 20) {
+async function scrapeFrilListings(maxListings = 20, userQuery = '') {
   console.log('[YahooFuriScraper] Starting Yahoo Flea Market bundle search...');
+
+  // ユーザー指定クエリがあればそれだけ使う。なければデフォルト一覧を使う
+  const queries = userQuery ? [userQuery] : BUNDLE_SEARCH_QUERIES;
 
   const seen   = new Set();
   const all    = [];
 
-  for (const query of BUNDLE_SEARCH_QUERIES) {
+  for (const query of queries) {
     if (all.length >= maxListings * 3) break; // gather extras before filtering
 
     try {

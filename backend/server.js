@@ -142,9 +142,10 @@ app.post('/api/scan-fril', async (req, res) => {
   const send = (obj) => res.write(JSON.stringify(obj) + '\n');
 
   try {
-    send({ stage: 'scraping', message: 'Yahoo Fril をスキャン中...' });
-    const maxListings = parseInt(req.query.max) || 3;
-    const listings = await scrapeFrilListings(maxListings);
+    const userQuery = (req.query.query || '').trim();
+    const maxListings = parseInt(req.query.max) || 20;
+    send({ stage: 'scraping', message: `「${userQuery || 'ゲームボーイ まとめ売り'}」をスキャン中...` });
+    const listings = await scrapeFrilListings(maxListings, userQuery);
 
     if (listings.length === 0) {
       send({ stage: 'done', success: false, message: 'Fril から出品が取得できませんでした。ネットワークを確認してください。' });

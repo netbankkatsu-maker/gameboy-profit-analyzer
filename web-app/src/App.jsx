@@ -20,6 +20,7 @@ function App() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showHelp, setShowHelp] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('ゲームボーイ まとめ売り')
 
   // スキャン進捗状態
   const [scanState, setScanState] = useState({
@@ -75,11 +76,13 @@ function App() {
   // ────────────────────────────────────────────
   async function scanFril() {
     if (scanState.active) return
+    const query = searchQuery.trim()
+    if (!query) return
 
     setScanState({
       active: true,
       stage: 'scraping',
-      message: 'Yahoo Fril をスキャン中...',
+      message: `「${query}」をスキャン中...`,
       current: 0,
       total: 0,
       logs: [],
@@ -88,7 +91,8 @@ function App() {
     setActiveTab('listings')
 
     try {
-      const res = await fetch(`${API_BASE}/api/scan-fril?max=3`, { method: 'POST' })
+      const params = new URLSearchParams({ max: 20, query })
+      const res = await fetch(`${API_BASE}/api/scan-fril?${params}`, { method: 'POST' })
       if (!res.ok) throw new Error(`サーバーエラー: HTTP ${res.status}`)
 
       const reader = res.body.getReader()
@@ -190,10 +194,27 @@ function App() {
         <div className="app-header-inner">
           <div className="app-header-text">
             <h1>🎮 ゲーム買取利益判定ツール</h1>
-            <p>Yahoo Fril → メルカリ 利益分析ダッシュボード</p>
           </div>
           <button className="help-trigger-btn" onClick={() => setShowHelp(true)}>
             ❓ ヘルプ
+          </button>
+        </div>
+        <div className="search-bar">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="検索ワードを入力（例: ゲームボーイ まとめ売り）"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !scanState.active && scanFril()}
+            disabled={scanState.active}
+          />
+          <button
+            className={`search-btn ${scanState.active ? 'scanning' : ''}`}
+            onClick={scanFril}
+            disabled={scanState.active || !searchQuery.trim()}
+          >
+            {scanState.active ? '⏳ 検索中...' : '🔍 検索'}
           </button>
         </div>
       </header>
