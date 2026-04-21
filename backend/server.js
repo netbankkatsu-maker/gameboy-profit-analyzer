@@ -266,8 +266,12 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`[Server] Running on http://localhost:${PORT}`);
-  console.log(`[Server] Health check: http://localhost:${PORT}/health`);
-});
+// Start server (local dev only; Vercel uses module.exports)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`[Server] Running on http://localhost:${PORT}`);
+    console.log(`[Server] Health check: http://localhost:${PORT}/health`);
+  });
+}
+
+module.exports = app;
